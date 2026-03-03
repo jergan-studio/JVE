@@ -3,12 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <title>Jergan Studio 3D</title>
+
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/TransformControls.js"></script>
 
 <style>
-body { margin:0; overflow:hidden; font-family:Arial; background:#111; color:white; }
+body { margin:0; overflow:hidden; background:#111; font-family:Arial; color:white; }
+
 #toolbar {
     position:fixed;
     top:10px;
@@ -20,6 +22,7 @@ body { margin:0; overflow:hidden; font-family:Arial; background:#111; color:whit
     gap:5px;
     z-index:10;
 }
+
 button {
     background:#333;
     color:white;
@@ -28,7 +31,9 @@ button {
     border-radius:5px;
     cursor:pointer;
 }
+
 button:hover { background:#555; }
+
 #learnBox {
     position:fixed;
     right:10px;
@@ -56,24 +61,29 @@ button:hover { background:#555; }
 <h3>How To Use</h3>
 <p>• Click Insert Cube to add object</p>
 <p>• Click object to select</p>
-<p>• Use Move / Scale / Rotate</p>
-<p>• Download exports working scene</p>
+<p>• Use Move / Scale / Rotate tools</p>
+<p>• Download exports a playable scene</p>
 </div>
 
 <script>
+
 let scene, camera, renderer, orbit, transform;
-let selected = null;
 let objects = [];
 
 init();
 animate();
 
-function init() {
+function init(){
 
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x111111);
 
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+    camera = new THREE.PerspectiveCamera(
+        75,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000
+    );
     camera.position.set(5,5,5);
 
     renderer = new THREE.WebGLRenderer({antialias:true});
@@ -85,8 +95,8 @@ function init() {
     transform = new THREE.TransformControls(camera, renderer.domElement);
     scene.add(transform);
 
-    transform.addEventListener('dragging-changed', function (event) {
-        orbit.enabled = !event.value;
+    transform.addEventListener("dragging-changed", function(e){
+        orbit.enabled = !e.value;
     });
 
     let light = new THREE.DirectionalLight(0xffffff,1);
@@ -96,19 +106,19 @@ function init() {
     let grid = new THREE.GridHelper(50,50);
     scene.add(grid);
 
-    window.addEventListener('resize', onResize);
-    window.addEventListener('pointerdown', selectObject);
-}
-
-function onResize(){
-    camera.aspect = window.innerWidth/window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    window.addEventListener("resize", onResize);
+    window.addEventListener("pointerdown", selectObject);
 }
 
 function animate(){
     requestAnimationFrame(animate);
     renderer.render(scene,camera);
+}
+
+function onResize(){
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
 function addCube(){
@@ -121,18 +131,19 @@ function addCube(){
 }
 
 function selectObject(event){
+
     let mouse = new THREE.Vector2(
-        (event.clientX / window.innerWidth)*2-1,
-        -(event.clientY / window.innerHeight)*2+1
+        (event.clientX / window.innerWidth) * 2 - 1,
+        -(event.clientY / window.innerHeight) * 2 + 1
     );
 
-    let ray = new THREE.Raycaster();
-    ray.setFromCamera(mouse,camera);
-    let hits = ray.intersectObjects(objects);
+    let raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(mouse, camera);
 
-    if(hits.length>0){
-        selected = hits[0].object;
-        transform.attach(selected);
+    let intersects = raycaster.intersectObjects(objects);
+
+    if(intersects.length > 0){
+        transform.attach(intersects[0].object);
     }
 }
 
@@ -159,48 +170,35 @@ function downloadProject(){
         rz:o.rotation.z
     }));
 
-    let exportHTML = `
-<!DOCTYPE html>
-<html>
-<head>
-<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
-</head>
-<body style="margin:0">
-<script>
-let scene=new THREE.Scene();
-let camera=new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,1000);
-camera.position.set(5,5,5);
-let renderer=new THREE.WebGLRenderer();
-renderer.setSize(window.innerWidth,window.innerHeight);
-document.body.appendChild(renderer.domElement);
-let light=new THREE.DirectionalLight(0xffffff,1);
-light.position.set(5,10,7);
-scene.add(light);
+    let exportHTML =
+'<!DOCTYPE html>'+
+'<html><head>'+
+'<meta charset="UTF-8">'+
+'<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"><\/script>'+
+'</head><body style="margin:0">'+
+'<script>'+
+'let scene=new THREE.Scene();'+
+'let camera=new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,1000);'+
+'camera.position.set(5,5,5);'+
+'let renderer=new THREE.WebGLRenderer({antialias:true});'+
+'renderer.setSize(window.innerWidth,window.innerHeight);'+
+'document.body.appendChild(renderer.domElement);'+
+'let light=new THREE.DirectionalLight(0xffffff,1);'+
+'light.position.set(5,10,7);'+
+'scene.add(light);'+
+'let grid=new THREE.GridHelper(50,50);scene.add(grid);'+
+'let objects='+JSON.stringify(data)+';'+
+'objects.forEach(o=>{'+
+'let cube=new THREE.Mesh(new THREE.BoxGeometry(),new THREE.MeshStandardMaterial({color:0x00ffcc}));'+
+'cube.position.set(o.x,o.y,o.z);'+
+'cube.scale.set(o.sx,o.sy,o.sz);'+
+'cube.rotation.set(o.rx,o.ry,o.rz);'+
+'scene.add(cube);'+
+'});'+
+'function animate(){requestAnimationFrame(animate);renderer.render(scene,camera);}animate();'+
+'<\/script></body></html>';
 
-let objects=${JSON.stringify(data)};
-
-objects.forEach(o=>{
-    let cube=new THREE.Mesh(
-        new THREE.BoxGeometry(),
-        new THREE.MeshStandardMaterial({color:0x00ffcc})
-    );
-    cube.position.set(o.x,o.y,o.z);
-    cube.scale.set(o.sx,o.sy,o.sz);
-    cube.rotation.set(o.rx,o.ry,o.rz);
-    scene.add(cube);
-});
-
-function animate(){
-    requestAnimationFrame(animate);
-    renderer.render(scene,camera);
-}
-animate();
-</script>
-</body>
-</html>
-`;
-
-    let blob = new Blob([exportHTML],{type:"text/html"});
+    let blob = new Blob([exportHTML], {type:"text/html"});
     let a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = "jergan_scene.html";
