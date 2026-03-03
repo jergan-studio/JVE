@@ -1,11 +1,11 @@
 body {
   margin: 0;
-  font-family: Arial;
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background: #111;
+  background: #1b1b1b;
   color: white;
+  font-family: Arial;
 }
 
 #topbar {
@@ -15,20 +15,30 @@ body {
   justify-content: space-between;
 }
 
-#editor-container {
-  height: 40%;
+#main {
+  flex: 1;
+  display: flex;
 }
 
-#editor {
-  width: 100%;
-  height: 100%;
-  background: #1e1e1e;
-  color: #0f0;
-  font-family: monospace;
+#hierarchy {
+  width: 200px;
+  background: #252525;
+  padding: 10px;
+  overflow-y: auto;
+}
+
+#inspector {
+  width: 250px;
+  background: #252525;
   padding: 10px;
 }
 
 #game {
   flex: 1;
   display: block;
+}
+
+#assets {
+  background: #222;
+  padding: 5px;
 }
