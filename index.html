@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Jergan Studio 3D - JVE Engine</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div id="topbar">
+    <h1>Jergan Studio 3D</h1>
+    <button onclick="runJVE()">Run Game</button>
+  </div>
+
+  <div id="editor-container">
+    <textarea id="editor">
+// Welcome to JVE
+
+scene {
+    background: skyblue;
+}
+
+cube player {
+    position: 0, 1, 0;
+    color: red;
+    size: 1;
+}
+
+onUpdate {
+    player.rotateY(1);
+}
+    </textarea>
+  </div>
+
+  <canvas id="game"></canvas>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="engine.js"></script>
+  <script src="jve-compiler.js"></script>
+</body>
+</html>
