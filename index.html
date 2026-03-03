@@ -1,40 +1,38 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Jergan Studio 3D - JVE Engine</title>
+  <title>Jergan Studio 3D</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <div id="topbar">
-    <h1>Jergan Studio 3D</h1>
-    <button onclick="runJVE()">Run Game</button>
+<div id="topbar">
+  <h2>Jergan Studio 3D</h2>
+  <div>
+    <button onclick="setTool('move')">Move</button>
+    <button onclick="setTool('rotate')">Rotate</button>
+    <button onclick="setTool('scale')">Scale</button>
+    <button onclick="toggleFPS()">First Person</button>
+    <button onclick="runJVE()">Run</button>
   </div>
+</div>
 
-  <div id="editor-container">
-    <textarea id="editor">
-// Welcome to JVE
-
-scene {
-    background: skyblue;
-}
-
-cube player {
-    position: 0, 1, 0;
-    color: red;
-    size: 1;
-}
-
-onUpdate {
-    player.rotateY(1);
-}
-    </textarea>
-  </div>
-
+<div id="main">
+  <div id="hierarchy"></div>
   <canvas id="game"></canvas>
+  <div id="inspector"></div>
+</div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="engine.js"></script>
-  <script src="jve-compiler.js"></script>
+<div id="assets">
+  <input type="file" id="modelInput" accept=".glb,.gltf">
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/loaders/GLTFLoader.js"></script>
+
+<script src="engine.js"></script>
+<script src="tools.js"></script>
+<script src="jve-compiler.js"></script>
+
 </body>
 </html>
