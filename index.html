@@ -1,38 +1,327 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Jergan Studio 3D</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<title>Jergan Studio 3D - JVE Engine</title>
+
+<style>
+body {
+  margin:0;
+  font-family:Arial;
+  background:#1b1b1b;
+  color:white;
+  overflow:hidden;
+}
+
+#topbar {
+  background:#222;
+  padding:10px;
+  display:flex;
+  justify-content:space-between;
+}
+
+#main {
+  display:flex;
+  height:calc(100vh - 40px);
+}
+
+#hierarchy {
+  width:200px;
+  background:#2a2a2a;
+  padding:10px;
+  overflow:auto;
+}
+
+#inspector {
+  width:250px;
+  background:#2a2a2a;
+  padding:10px;
+}
+
+#viewport {
+  flex:1;
+  position:relative;
+}
+
+#game {
+  width:100%;
+  height:100%;
+  display:block;
+}
+
+#scriptEditor {
+  position:absolute;
+  bottom:0;
+  right:0;
+  width:320px;
+  height:250px;
+  background:#111;
+  padding:10px;
+}
+
+#scriptCode {
+  width:100%;
+  height:170px;
+  background:#000;
+  color:#0f0;
+  font-family:monospace;
+}
+
+button {
+  margin:2px;
+}
+</style>
 </head>
 <body>
 
 <div id="topbar">
-  <h2>Jergan Studio 3D</h2>
   <div>
-    <button onclick="setTool('move')">Move</button>
-    <button onclick="setTool('rotate')">Rotate</button>
-    <button onclick="setTool('scale')">Scale</button>
+    <button onclick="createCube()">Add Part</button>
     <button onclick="toggleFPS()">First Person</button>
-    <button onclick="runJVE()">Run</button>
+    <input type="file" id="modelInput" accept=".glb,.gltf">
   </div>
+  <div>Jergan Studio 3D</div>
 </div>
 
 <div id="main">
   <div id="hierarchy"></div>
-  <canvas id="game"></canvas>
-  <div id="inspector"></div>
-</div>
 
-<div id="assets">
-  <input type="file" id="modelInput" accept=".glb,.gltf">
+  <div id="viewport">
+    <canvas id="game"></canvas>
+
+    <div id="scriptEditor">
+      <h4>JVE Script</h4>
+<textarea id="scriptCode">
+script Spin {
+
+  var speed = 0.02;
+
+  onUpdate {
+    self.rotateY(speed);
+  }
+
+}
+</textarea>
+      <button onclick="compileAndAttach()">Attach Script</button>
+    </div>
+  </div>
+
+  <div id="inspector"></div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/loaders/GLTFLoader.js"></script>
 
-<script src="engine.js"></script>
-<script src="tools.js"></script>
-<script src="jve-compiler.js"></script>
+<script>
+let scene, camera, renderer;
+let objects = {};
+let selectedObject = null;
 
+let raycaster = new THREE.Raycaster();
+let mouse = new THREE.Vector2();
+
+let keys = {};
+let isFPS = false;
+let mouseDown = false;
+
+init();
+animate();
+
+function init() {
+  const canvas = document.getElementById("game");
+
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color("skyblue");
+
+  camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+  camera.position.set(0,2,5);
+
+  renderer = new THREE.WebGLRenderer({canvas});
+  renderer.setSize(window.innerWidth-450, window.innerHeight-40);
+
+  const light = new THREE.DirectionalLight(0xffffff,1);
+  light.position.set(5,10,7);
+  scene.add(light);
+
+  const grid = new THREE.GridHelper(50,50);
+  scene.add(grid);
+
+  setupControls();
+  setupModelLoader();
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  if(isFPS){
+    if(keys["w"]) camera.translateZ(-0.1);
+    if(keys["s"]) camera.translateZ(0.1);
+    if(keys["a"]) camera.translateX(-0.1);
+    if(keys["d"]) camera.translateX(0.1);
+  }
+
+  for(let name in objects){
+    const obj = objects[name];
+    obj.scripts.forEach(script=>{
+      script.run(obj.mesh);
+    });
+  }
+
+  renderer.render(scene,camera);
+}
+
+function createCube(){
+  const geo = new THREE.BoxGeometry(1,1,1);
+  const mat = new THREE.MeshStandardMaterial({color:0x00ff00});
+  const cube = new THREE.Mesh(geo,mat);
+  cube.position.y=1;
+  scene.add(cube);
+
+  const id="Part_"+Object.keys(objects).length;
+  cube.userData.id=id;
+
+  objects[id]={
+    mesh:cube,
+    scripts:[]
+  };
+
+  updateHierarchy();
+}
+
+function updateHierarchy(){
+  const panel=document.getElementById("hierarchy");
+  panel.innerHTML="";
+  for(let name in objects){
+    const div=document.createElement("div");
+    div.textContent=name;
+    div.onclick=()=>selectByName(name);
+    panel.appendChild(div);
+  }
+}
+
+function selectByName(name){
+  selectedObject=objects[name];
+  showInspector(name);
+}
+
+function showInspector(name){
+  const obj=objects[name];
+  document.getElementById("inspector").innerHTML=`
+  <h3>${name}</h3>
+  X:<input id="px" value="${obj.mesh.position.x}"><br>
+  Y:<input id="py" value="${obj.mesh.position.y}"><br>
+  Z:<input id="pz" value="${obj.mesh.position.z}"><br>
+  <button onclick="applyTransform('${name}')">Apply</button>
+  `;
+}
+
+function applyTransform(name){
+  const obj=objects[name];
+  obj.mesh.position.set(
+    parseFloat(px.value),
+    parseFloat(py.value),
+    parseFloat(pz.value)
+  );
+}
+
+function setupControls(){
+  window.addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);
+  window.addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
+
+  window.addEventListener("mousedown",e=>{
+    if(e.button===2) mouseDown=true;
+  });
+
+  window.addEventListener("mouseup",e=>{
+    if(e.button===2) mouseDown=false;
+  });
+
+  window.addEventListener("mousemove",e=>{
+    if(mouseDown){
+      camera.rotation.y-=e.movementX*0.002;
+      camera.rotation.x-=e.movementY*0.002;
+    }
+  });
+
+  window.addEventListener("contextmenu",e=>e.preventDefault());
+}
+
+function toggleFPS(){
+  isFPS=!isFPS;
+}
+
+function setupModelLoader(){
+  const loader=new THREE.GLTFLoader();
+  modelInput.addEventListener("change",e=>{
+    const file=e.target.files[0];
+    const url=URL.createObjectURL(file);
+    loader.load(url,gltf=>{
+      scene.add(gltf.scene);
+    });
+  });
+}
+
+/* =========================
+      JVE COMPILER
+========================= */
+
+function compileAndAttach(){
+  if(!selectedObject){
+    alert("Select an object first!");
+    return;
+  }
+
+  const code=document.getElementById("scriptCode").value;
+  const compiled=compileJVE(code);
+  selectedObject.scripts.push(compiled);
+}
+
+function compileJVE(code){
+
+  let vars={};
+
+  const varRegex=/var\s+(\w+)\s*=\s*([\d.]+);/g;
+  let match;
+
+  while((match=varRegex.exec(code))!==null){
+    vars[match[1]]=parseFloat(match[2]);
+  }
+
+  let startBody="";
+  let updateBody="";
+
+  const startMatch=code.match(/onStart\s*{([\s\S]*?)}/);
+  if(startMatch) startBody=startMatch[1];
+
+  const updateMatch=code.match(/onUpdate\s*{([\s\S]*?)}/);
+  if(updateMatch) updateBody=updateMatch[1];
+
+  updateBody=updateBody.replace(/self\.rotateY\((.*?)\);/g,
+    "mesh.rotation.y+=$1;"
+  );
+
+  updateBody=updateBody.replace(/self\.positionY\s*=\s*(.*?);/g,
+    "mesh.position.y=$1;"
+  );
+
+  for(let v in vars){
+    updateBody=updateBody.replaceAll(v,vars[v]);
+  }
+
+  const startFunc=new Function("mesh",startBody);
+  const updateFunc=new Function("mesh",updateBody);
+
+  return{
+    started:false,
+    run(mesh){
+      if(!this.started){
+        startFunc(mesh);
+        this.started=true;
+      }
+      updateFunc(mesh);
+    }
+  };
+}
+</script>
 </body>
 </html>
