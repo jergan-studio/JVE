@@ -2,207 +2,237 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Jergan Studio 3D</title>
+<title>Jergan Studio 3D - Full Upgrade</title>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/TransformControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/PointerLockControls.js"></script>
 
 <style>
 body { margin:0; overflow:hidden; background:#111; font-family:Arial; color:white; }
 
 #toolbar {
-    position:fixed;
-    top:10px;
-    left:10px;
-    background:#222;
-    padding:10px;
-    border-radius:10px;
-    display:flex;
-    gap:5px;
-    z-index:10;
+ position:fixed;
+ top:10px;
+ left:10px;
+ background:#222;
+ padding:10px;
+ border-radius:10px;
+ display:flex;
+ flex-wrap:wrap;
+ gap:5px;
+ z-index:10;
+ max-width:95%;
 }
 
 button {
-    background:#333;
-    color:white;
-    border:none;
-    padding:8px;
-    border-radius:5px;
-    cursor:pointer;
+ background:#333;
+ color:white;
+ border:none;
+ padding:6px 8px;
+ border-radius:5px;
+ cursor:pointer;
+ font-size:12px;
 }
-
 button:hover { background:#555; }
 
-#learnBox {
-    position:fixed;
-    right:10px;
-    top:10px;
-    background:#222;
-    padding:15px;
-    border-radius:10px;
-    display:none;
-    width:250px;
+#panel {
+ position:fixed;
+ right:10px;
+ top:10px;
+ width:300px;
+ background:#1b1b1b;
+ padding:10px;
+ border-radius:10px;
+ display:none;
+}
+
+#scriptEditor {
+ width:100%;
+ height:120px;
+ background:#000;
+ color:#0f0;
+ font-family:monospace;
 }
 </style>
 </head>
 <body>
 
 <div id="toolbar">
-    <button onclick="addCube()">Insert Cube</button>
-    <button onclick="setTool('translate')">Move</button>
-    <button onclick="setTool('scale')">Scale</button>
-    <button onclick="setTool('rotate')">Rotate</button>
-    <button onclick="downloadProject()">Download</button>
-    <button onclick="toggleLearn()">Learn</button>
+ <button onclick="addCube()">Insert Cube</button>
+ <button onclick="addSphere()">Insert Sphere</button>
+ <button onclick="setTool('translate')">Move</button>
+ <button onclick="setTool('scale')">Scale</button>
+ <button onclick="setTool('rotate')">Rotate</button>
+ <button onclick="togglePlay()">Play Mode</button>
+ <button onclick="togglePanel()">Scripts</button>
+ <button onclick="changeMaterial()">Material</button>
+ <button onclick="saveProject()">Save</button>
+ <button onclick="loadProject()">Load</button>
+ <button onclick="downloadProject()">Download</button>
 </div>
 
-<div id="learnBox">
-<h3>How To Use</h3>
-<p>• Click Insert Cube to add object</p>
-<p>• Click object to select</p>
-<p>• Use Move / Scale / Rotate tools</p>
-<p>• Download exports a playable scene</p>
+<div id="panel">
+ <h3>Script Editor (JVE)</h3>
+ <textarea id="scriptEditor">// Example\nselected.rotation.y += 0.01;</textarea>
+ <button onclick="runScript()">Run Script</button>
 </div>
 
 <script>
-
-let scene, camera, renderer, orbit, transform;
-let objects = [];
+let scene,camera,renderer,orbit,transform,controls;
+let objects=[];
+let selected=null;
+let playMode=false;
 
 init();
 animate();
 
 function init(){
+ scene=new THREE.Scene();
+ scene.background=new THREE.Color(0x111111);
 
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x111111);
+ camera=new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,1000);
+ camera.position.set(5,5,5);
 
-    camera = new THREE.PerspectiveCamera(
-        75,
-        window.innerWidth / window.innerHeight,
-        0.1,
-        1000
-    );
-    camera.position.set(5,5,5);
+ renderer=new THREE.WebGLRenderer({antialias:true});
+ renderer.setSize(window.innerWidth,window.innerHeight);
+ document.body.appendChild(renderer.domElement);
 
-    renderer = new THREE.WebGLRenderer({antialias:true});
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
+ orbit=new THREE.OrbitControls(camera,renderer.domElement);
 
-    orbit = new THREE.OrbitControls(camera, renderer.domElement);
+ transform=new THREE.TransformControls(camera,renderer.domElement);
+ scene.add(transform);
+ transform.addEventListener('dragging-changed',e=>orbit.enabled=!e.value);
 
-    transform = new THREE.TransformControls(camera, renderer.domElement);
-    scene.add(transform);
+ controls=new THREE.PointerLockControls(camera,document.body);
 
-    transform.addEventListener("dragging-changed", function(e){
-        orbit.enabled = !e.value;
-    });
+ let light=new THREE.DirectionalLight(0xffffff,1);
+ light.position.set(5,10,7);
+ scene.add(light);
 
-    let light = new THREE.DirectionalLight(0xffffff,1);
-    light.position.set(5,10,7);
-    scene.add(light);
+ scene.add(new THREE.GridHelper(50,50));
 
-    let grid = new THREE.GridHelper(50,50);
-    scene.add(grid);
+ window.addEventListener('resize',()=>{
+  camera.aspect=window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth,window.innerHeight);
+ });
 
-    window.addEventListener("resize", onResize);
-    window.addEventListener("pointerdown", selectObject);
+ window.addEventListener('pointerdown',selectObject);
 }
 
 function animate(){
-    requestAnimationFrame(animate);
-    renderer.render(scene,camera);
-}
-
-function onResize(){
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+ requestAnimationFrame(animate);
+ renderer.render(scene,camera);
 }
 
 function addCube(){
-    let geo = new THREE.BoxGeometry();
-    let mat = new THREE.MeshStandardMaterial({color:0x00ffcc});
-    let cube = new THREE.Mesh(geo,mat);
-    cube.position.y = 0.5;
-    scene.add(cube);
-    objects.push(cube);
+ let m=new THREE.MeshStandardMaterial({color:0x00ffcc});
+ let c=new THREE.Mesh(new THREE.BoxGeometry(),m);
+ c.position.y=0.5;
+ scene.add(c);
+ objects.push(c);
 }
 
-function selectObject(event){
-
-    let mouse = new THREE.Vector2(
-        (event.clientX / window.innerWidth) * 2 - 1,
-        -(event.clientY / window.innerHeight) * 2 + 1
-    );
-
-    let raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera(mouse, camera);
-
-    let intersects = raycaster.intersectObjects(objects);
-
-    if(intersects.length > 0){
-        transform.attach(intersects[0].object);
-    }
+function addSphere(){
+ let m=new THREE.MeshStandardMaterial({color:0xff00aa});
+ let s=new THREE.Mesh(new THREE.SphereGeometry(0.5,32,32),m);
+ s.position.y=0.5;
+ scene.add(s);
+ objects.push(s);
 }
 
-function setTool(mode){
-    transform.setMode(mode);
+function selectObject(e){
+ if(playMode) return;
+ let mouse=new THREE.Vector2(
+  (e.clientX/window.innerWidth)*2-1,
+  -(e.clientY/window.innerHeight)*2+1
+ );
+ let ray=new THREE.Raycaster();
+ ray.setFromCamera(mouse,camera);
+ let hit=ray.intersectObjects(objects);
+ if(hit.length>0){
+  selected=hit[0].object;
+  transform.attach(selected);
+ }
 }
 
-function toggleLearn(){
-    let box = document.getElementById("learnBox");
-    box.style.display = box.style.display === "none" ? "block" : "none";
+function setTool(mode){ transform.setMode(mode); }
+
+function togglePlay(){
+ playMode=!playMode;
+ if(playMode){
+  orbit.enabled=false;
+  document.body.requestPointerLock();
+  document.addEventListener('mousemove',moveCamera);
+ }else{
+  document.exitPointerLock();
+  document.removeEventListener('mousemove',moveCamera);
+  orbit.enabled=true;
+ }
+}
+
+function moveCamera(e){
+ camera.rotation.y-=e.movementX*0.002;
+ camera.rotation.x-=e.movementY*0.002;
+}
+
+function togglePanel(){
+ let p=document.getElementById('panel');
+ p.style.display=p.style.display==='none'?'block':'none';
+}
+
+function runScript(){
+ if(!selected) return alert('Select object');
+ try{
+  eval(document.getElementById('scriptEditor').value);
+ }catch(err){ alert(err); }
+}
+
+function changeMaterial(){
+ if(!selected) return;
+ selected.material.color.set(Math.random()*0xffffff);
+}
+
+function saveProject(){
+ let data=JSON.stringify(objects.map(o=>({
+  type:o.geometry.type,
+  pos:o.position,
+  scale:o.scale,
+  rot:o.rotation,
+  color:o.material.color.getHex()
+ })));
+ localStorage.setItem('jergan_save',data);
+ alert('Saved');
+}
+
+function loadProject(){
+ let data=JSON.parse(localStorage.getItem('jergan_save')||'[]');
+ objects.forEach(o=>scene.remove(o));
+ objects=[];
+ data.forEach(d=>{
+  let geo=d.type.includes('Sphere')?new THREE.SphereGeometry(0.5,32,32):new THREE.BoxGeometry();
+  let mat=new THREE.MeshStandardMaterial({color:d.color});
+  let mesh=new THREE.Mesh(geo,mat);
+  mesh.position.set(d.pos.x,d.pos.y,d.pos.z);
+  mesh.scale.set(d.scale.x,d.scale.y,d.scale.z);
+  mesh.rotation.set(d.rot._x,d.rot._y,d.rot._z);
+  scene.add(mesh);
+  objects.push(mesh);
+ });
 }
 
 function downloadProject(){
-
-    let data = objects.map(o=>({
-        x:o.position.x,
-        y:o.position.y,
-        z:o.position.z,
-        sx:o.scale.x,
-        sy:o.scale.y,
-        sz:o.scale.z,
-        rx:o.rotation.x,
-        ry:o.rotation.y,
-        rz:o.rotation.z
-    }));
-
-    let exportHTML =
-'<!DOCTYPE html>'+
-'<html><head>'+
-'<meta charset="UTF-8">'+
-'<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"><\/script>'+
-'</head><body style="margin:0">'+
-'<script>'+
-'let scene=new THREE.Scene();'+
-'let camera=new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,1000);'+
-'camera.position.set(5,5,5);'+
-'let renderer=new THREE.WebGLRenderer({antialias:true});'+
-'renderer.setSize(window.innerWidth,window.innerHeight);'+
-'document.body.appendChild(renderer.domElement);'+
-'let light=new THREE.DirectionalLight(0xffffff,1);'+
-'light.position.set(5,10,7);'+
-'scene.add(light);'+
-'let grid=new THREE.GridHelper(50,50);scene.add(grid);'+
-'let objects='+JSON.stringify(data)+';'+
-'objects.forEach(o=>{'+
-'let cube=new THREE.Mesh(new THREE.BoxGeometry(),new THREE.MeshStandardMaterial({color:0x00ffcc}));'+
-'cube.position.set(o.x,o.y,o.z);'+
-'cube.scale.set(o.sx,o.sy,o.sz);'+
-'cube.rotation.set(o.rx,o.ry,o.rz);'+
-'scene.add(cube);'+
-'});'+
-'function animate(){requestAnimationFrame(animate);renderer.render(scene,camera);}animate();'+
-'<\/script></body></html>';
-
-    let blob = new Blob([exportHTML], {type:"text/html"});
-    let a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "jergan_scene.html";
-    a.click();
+ let save=localStorage.getItem('jergan_save')||'[]';
+ let html='<!DOCTYPE html><html><head><meta charset="UTF-8"><script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"><\/script></head><body style="margin:0"><script>'+
+ 'let scene=new THREE.Scene();let camera=new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,1000);camera.position.set(5,5,5);let renderer=new THREE.WebGLRenderer();renderer.setSize(window.innerWidth,window.innerHeight);document.body.appendChild(renderer.domElement);scene.add(new THREE.DirectionalLight(0xffffff,1));let data='+save+';data.forEach(d=>{let geo=d.type.includes("Sphere")?new THREE.SphereGeometry(0.5,32,32):new THREE.BoxGeometry();let mat=new THREE.MeshStandardMaterial({color:d.color});let m=new THREE.Mesh(geo,mat);m.position.set(d.pos.x,d.pos.y,d.pos.z);m.scale.set(d.scale.x,d.scale.y,d.scale.z);m.rotation.set(d.rot._x,d.rot._y,d.rot._z);scene.add(m);});function a(){requestAnimationFrame(a);renderer.render(scene,camera);}a();'+
+ '<\/script></body></html>';
+ let blob=new Blob([html],{type:'text/html'});
+ let a=document.createElement('a');
+ a.href=URL.createObjectURL(blob);
+ a.download='jergan_game.html';
+ a.click();
 }
 
 </script>
