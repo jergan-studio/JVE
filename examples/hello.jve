@@ -8,3 +8,6 @@ html {
 js {
   console.log("JavaScript injected by JVE");
 }
+
+# The code(...) wrapper is required for Openwindow.
+Openwindow(js code(<html><body><h1>Hello from a JVE window</h1><p>This HTML is running in a new window.</p></body></html>))
