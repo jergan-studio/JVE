@@ -24,6 +24,17 @@
         script.onerror = reject;
         document.head.appendChild(script);
       });
+    },
+
+    openWindow(html) {
+      const child = window.open('', '_blank');
+      if (!child) {
+        throw new Error('JVE Openwindow: the browser blocked the new window.');
+      }
+      child.document.open();
+      child.document.write(html);
+      child.document.close();
+      return child;
     }
   };
 
