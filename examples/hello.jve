@@ -1,0 +1,10 @@
+echo "Hello from JVE"
+
+html {
+  <h1>JVE works!</h1>
+  <p>This page was created with JVE.</p>
+}
+
+js {
+  console.log("JavaScript injected by JVE");
+}
