@@ -36,6 +36,16 @@ function compile(source) {
       continue;
     }
 
+    const openWindow = line.match(/^Openwindow\(js\s+code\((.*)\)\)$/s);
+    if (openWindow) {
+      output.push(`JVE.openWindow(${JSON.stringify(openWindow[1])});`);
+      continue;
+    }
+
+    if (/^Openwindow\(/.test(line) && !openWindow) {
+      throw new Error(`JVE error on line ${i + 1}: Openwindow requires the exact form Openwindow(js code(HTML))`);
+    }
+
     const echo = line.match(/^echo\s+["'](.*)["']$/);
     if (echo) {
       output.push(`console.log(${JSON.stringify(echo[1])});`);
