@@ -1,0 +1,11 @@
+{
+  "name": "jve",
+  "version": "0.1.0",
+  "description": "JVE - a simple scripting layer for HTML, JavaScript, and web data.",
+  "main": "compiler/compiler.js",
+  "type": "commonjs",
+  "scripts": {
+    "run": "node compiler/compiler.js"
+  },
+  "license": "MIT"
+}
